@@ -6,3 +6,4 @@ audio-recorder-streamlit==0.0.10
 python-docx==1.2.0
 requests==2.32.3
 pandas
+google-genai

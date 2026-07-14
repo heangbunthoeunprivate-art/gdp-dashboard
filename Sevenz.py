@@ -12,6 +12,16 @@ from gtts import gTTS
 from openai import OpenAI
 
 try:
+    from google import genai
+    from google.genai import types as google_types
+
+    HAS_GOOGLE_GENAI = True
+except ImportError:
+    genai = None
+    google_types = None
+    HAS_GOOGLE_GENAI = False
+
+try:
     import requests
 
     HAS_REQUESTS = True
@@ -510,11 +520,20 @@ def estimate_tokens(text):
 
 def update_daily_usage(prompt_text, output_text, response):
     ensure_daily_usage_state()
-    usage = getattr(response, "usage", None)
+    usage = getattr(response, "usage", None) or getattr(response, "usage_metadata", None)
 
-    prompt_tokens = getattr(usage, "prompt_tokens", None) if usage else None
-    completion_tokens = getattr(usage, "completion_tokens", None) if usage else None
-    total_tokens = getattr(usage, "total_tokens", None) if usage else None
+    def first_attr(obj, names):
+        if not obj:
+            return None
+        for name in names:
+            value = getattr(obj, name, None)
+            if value is not None:
+                return value
+        return None
+
+    prompt_tokens = first_attr(usage, ["prompt_tokens", "prompt_token_count", "input_tokens", "input_token_count"])
+    completion_tokens = first_attr(usage, ["completion_tokens", "candidates_token_count", "output_tokens", "output_token_count"])
+    total_tokens = first_attr(usage, ["total_tokens", "total_token_count"])
 
     if prompt_tokens is None:
         prompt_tokens = estimate_tokens(prompt_text)
@@ -619,9 +638,12 @@ def call_ai(
             )
 
         if provider == "Gemini":
-            client = OpenAI(
+            if not HAS_GOOGLE_GENAI:
+                return False, "Gemini SDK is not installed. Please install google-genai.", {}
+
+            client = genai.Client(
                 api_key=api_key,
-                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                http_options=google_types.HttpOptions(api_version="v1"),
             )
             candidate_models = [model] + [m for m in GEMINI_FALLBACK_MODELS if m != model]
             last_error = ""
@@ -631,8 +653,16 @@ def call_ai(
                     if delay > 0:
                         time.sleep(delay)
                     try:
-                        response = do_request(client, chosen_model)
-                        text = response.choices[0].message.content or ""
+                        response = client.models.generate_content(
+                            model=chosen_model,
+                            contents=user_prompt,
+                            config=google_types.GenerateContentConfig(
+                                system_instruction=system_prompt,
+                                temperature=temperature,
+                                max_output_tokens=max_tokens,
+                            ),
+                        )
+                        text = getattr(response, "text", "") or ""
                         if not text.strip():
                             return False, "Error: Empty response from AI model."
                         if track_usage:
