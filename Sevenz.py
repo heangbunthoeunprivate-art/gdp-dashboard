@@ -859,13 +859,20 @@ def test_api_key(api_key, provider, model):
     return call_ai(
         api_key=api_key,
         system_prompt="You are a concise assistant.",
-        user_prompt="Reply with exactly: API_OK",
+        user_prompt="Reply with exactly API_OK and nothing else.",
         provider=provider,
         model=model,
         temperature=0,
         max_tokens=20,
         track_usage=False,
     )
+
+
+def is_api_test_success_response(text):
+    if not isinstance(text, str) or not text.strip():
+        return False
+    # Accept API_OK even when the model adds markdown/punctuation.
+    return re.search(r"\bAPI\s*[_\-]?\s*OK\b", text, flags=re.IGNORECASE) is not None
 
 
 def build_song_prompt(lang, title, desc, genre, mood, instruments, structure, style_inf, bpm):
@@ -2043,11 +2050,14 @@ if "ស្វ័យប្រវត្តិ" in mode:
             else:
                 with st.spinner("Testing API connection..."):
                     ok, result = test_api_key(api_key, provider, model_name)
-                if ok and "API_OK" in result:
+                if ok and is_api_test_success_response(result):
                     st.session_state.api_test_message = "status-good|API Key ត្រឹមត្រូវ និងដំណើរការ"
                     update_health_from_result(True, result, provider, model_name)
                 elif ok:
-                    st.session_state.api_test_message = "status-warn|Connection បាន ប៉ុន្តែ response មិនទាន់ត្រឹមត្រូវ"
+                    preview = (result or "")[:80].replace("\n", " ").strip()
+                    st.session_state.api_test_message = (
+                        f"status-warn|Connection បាន ប៉ុន្តែ response ខុស format (ទទួលបាន: {preview})"
+                    )
                     update_health_from_result(True, result, provider, model_name)
                 elif is_quota_error(result):
                     st.session_state.api_test_message = "status-good|API Key ត្រឹមត្រូវ ប៉ុន្តែ quota អស់ (429). សូមប្ដូរ model ឬគម្រោង billing។"
