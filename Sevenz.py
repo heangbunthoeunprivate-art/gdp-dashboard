@@ -783,12 +783,18 @@ def call_ai(
             last_error = ""
 
             for chosen_model in candidate_models:
-                token_budgets = [max_tokens]
-                boosted_budget = min(4096, max(64, int(max_tokens) * 2))
-                if boosted_budget not in token_budgets:
-                    token_budgets.append(boosted_budget)
+                # Progressively increase output budget for Gemini until the API ceiling.
+                token_budgets = []
+                current_budget = max(64, int(max_tokens))
+                while True:
+                    if current_budget not in token_budgets:
+                        token_budgets.append(current_budget)
+                    if current_budget >= 4096:
+                        break
+                    current_budget = min(4096, current_budget * 2)
 
                 for current_max_tokens in token_budgets:
+                    should_try_next_budget = False
                     for delay in retry_delays:
                         if delay > 0:
                             time.sleep(delay)
@@ -809,9 +815,10 @@ def call_ai(
                                     # Retry delays/model fallbacks before surfacing an error.
                                     if delay != retry_delays[-1]:
                                         continue
-                                if "MAX_TOKENS" in (parse_note or "") and current_max_tokens < boosted_budget:
-                                    # Retry same model once with a larger output budget.
-                                    continue
+                                if "MAX_TOKENS" in (parse_note or "") and current_max_tokens < token_budgets[-1]:
+                                    # Move to the next token budget immediately.
+                                    should_try_next_budget = True
+                                    break
                                 details = parse_note or json.dumps(response_json, ensure_ascii=False)[:800]
                                 return False, f"Gemini returned no text ({details})."
                             if track_usage:
@@ -829,6 +836,8 @@ def call_ai(
                                     continue
                                 return False, format_provider_error(err_text, provider, chosen_model)
                             break
+                    if should_try_next_budget:
+                        continue
             return False, format_provider_error(last_error, provider, model)
         else:
             client = OpenAI(api_key=api_key)
