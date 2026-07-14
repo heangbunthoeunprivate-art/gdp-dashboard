@@ -1176,7 +1176,7 @@ st.markdown(
 :root {
     --bg-0: #0b1119;
     --bg-1: #0f1823;
-    --bg-card: #132233;
+    --bg-card: rgba(19, 34, 51, 0.44);
     --stroke: rgba(98, 165, 255, 0.24);
     --text-main: #e7f0ff;
     --text-soft: #b8c6da;
@@ -1221,13 +1221,18 @@ header[data-testid="stHeader"] {
     padding-top: 0.35rem;
     padding-left: 1rem;
     padding-right: 1rem;
+    background: rgba(8, 17, 27, 0.19);
+    border: 1px solid rgba(128, 178, 238, 0.14);
+    border-radius: 18px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .hero {
     background:
         radial-gradient(circle at 82% 18%, rgba(86, 167, 255, 0.32) 0%, rgba(86, 167, 255, 0.02) 42%),
         radial-gradient(circle at 20% 30%, rgba(55, 210, 158, 0.22) 0%, rgba(55, 210, 158, 0.02) 40%),
-        linear-gradient(120deg, #102235 0%, #131f2f 55%, #0f1928 100%);
+        linear-gradient(120deg, rgba(16, 34, 53, 0.61) 0%, rgba(19, 31, 47, 0.58) 55%, rgba(15, 25, 40, 0.61) 100%);
     border: 1px solid var(--stroke);
     border-radius: 18px;
     padding: 16px 18px;
@@ -1235,6 +1240,8 @@ header[data-testid="stHeader"] {
     width: 100%;
     box-sizing: border-box;
     overflow: hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 .hero-title {
@@ -1245,15 +1252,55 @@ header[data-testid="stHeader"] {
     letter-spacing: 0.2px;
 }
 
+.hero-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-7code {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 82px;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(55, 210, 158, 0.32), rgba(86, 167, 255, 0.35));
+    border: 1px solid rgba(184, 214, 255, 0.35);
+    color: #eaf4ff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    position: relative;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    animation: logoBounce 2.1s ease-in-out infinite, codeBlurGlow 2.1s ease-in-out infinite;
+}
+
+.logo-7code::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(120, 200, 255, 0.26) 0%, rgba(120, 200, 255, 0) 72%);
+    filter: blur(7px);
+    z-index: -1;
+    animation: logoAura 2.1s ease-in-out infinite;
+}
+
 .hero-sub {
     color: #c7d7ed;
     font-size: 14px;
 }
 
 .stTextArea textarea, .stTextInput input, .stSelectbox select {
-    background: rgba(13, 24, 38, 0.72) !important;
+    background: rgba(13, 24, 38, 0.38) !important;
     border-radius: 12px !important;
     border: 1px solid rgba(119, 160, 214, 0.35) !important;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
 
 .stButton > button {
@@ -1267,17 +1314,74 @@ header[data-testid="stHeader"] {
 }
 
 .stButton > button:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px) scale(1.01);
     filter: saturate(1.08);
-    box-shadow: 0 10px 22px rgba(10, 20, 34, 0.42);
+    box-shadow: 0 8px 20px rgba(10, 20, 34, 0.38);
+}
+
+.stButton > button:active {
+    transform: translateY(0) scale(0.985);
+    box-shadow: 0 4px 12px rgba(10, 20, 34, 0.34);
+}
+
+.stButton > button:focus-visible {
+    outline: 2px solid rgba(125, 196, 255, 0.75);
+    outline-offset: 2px;
+}
+
+@keyframes buttonPulse {
+    0% {
+        box-shadow: 0 6px 16px rgba(13, 24, 38, 0.34);
+    }
+    50% {
+        box-shadow: 0 10px 22px rgba(40, 140, 230, 0.26);
+    }
+    100% {
+        box-shadow: 0 6px 16px rgba(13, 24, 38, 0.34);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stButton > button {
+        transition: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .block-container {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        border-radius: 12px;
+    }
+    .hero {
+        padding: 12px 12px;
+    }
+    .hero-title {
+        font-size: 21px;
+    }
+    .hero-sub {
+        font-size: 13px;
+    }
+    .logo-7code {
+        min-width: 72px;
+        height: 27px;
+        font-size: 11px;
+        animation: none;
+    }
+    .quickbar {
+        top: 0.2rem;
+        padding: 6px 8px;
+    }
 }
 
 [data-testid="stTabs"] [role="tablist"] {
     gap: 8px;
-    background: rgba(8, 18, 30, 0.62);
+    background: rgba(8, 18, 30, 0.32);
     border: 1px solid var(--stroke);
     border-radius: 14px;
     padding: 6px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 [data-testid="stTabs"] [role="tab"] {
@@ -1292,13 +1396,15 @@ header[data-testid="stHeader"] {
 }
 
 .pro-card {
-    background: linear-gradient(165deg, rgba(19, 34, 51, 0.86), rgba(14, 27, 42, 0.86));
+    background: linear-gradient(165deg, rgba(19, 34, 51, 0.46), rgba(14, 27, 42, 0.42));
     border: 1px solid var(--stroke);
     border-radius: 14px;
     padding: 10px 12px;
     margin-bottom: 10px;
     box-shadow: 0 8px 24px rgba(5, 10, 20, 0.22);
     animation: fadeInUp 0.24s ease;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
 }
 
 .card-kicker {
@@ -1339,6 +1445,35 @@ header[data-testid="stHeader"] {
     to {
         opacity: 1;
         transform: translateY(0px);
+    }
+}
+
+@keyframes logoBounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+@keyframes codeBlurGlow {
+    0%, 100% {
+        text-shadow: 0 0 0 rgba(173, 230, 255, 0.0);
+    }
+    50% {
+        text-shadow: 0 0 8px rgba(173, 230, 255, 0.6), 0 0 16px rgba(86, 167, 255, 0.35);
+    }
+}
+
+@keyframes logoAura {
+    0%, 100% {
+        opacity: 0.28;
+        transform: scale(0.98);
+    }
+    50% {
+        opacity: 0.58;
+        transform: scale(1.04);
     }
 }
 
@@ -1433,38 +1568,83 @@ if "rhyme_last_report" not in st.session_state:
     st.session_state.rhyme_last_report = {}
 if "quick_action" not in st.session_state:
     st.session_state.quick_action = ""
+if "active_menu" not in st.session_state:
+    st.session_state.active_menu = "compose"
 
 ensure_daily_usage_state()
 
 st.markdown(
     """
 <div class="hero">
-    <div class="hero-title">SEVENZ Studio Pro</div>
-    <div class="hero-sub">Compose smarter, judge faster, produce cleaner tracks in one professional workflow.</div>
-    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap: wrap;">
-        <span class="pill">Compose</span>
-        <span class="pill">Analyze</span>
-        <span class="pill">Generate</span>
-        <span class="pill">Export</span>
+    <div class="hero-brand">
+        <div class="logo-7code">7 CODE</div>
+        <div class="hero-title">SEVENZ Studio Pro</div>
     </div>
+    <div class="hero-sub">Compose smarter, judge faster, produce cleaner tracks in one professional workflow.</div>
 </div>
 """,
     unsafe_allow_html=True,
 )
 
+menu_col1, menu_col2, menu_col3, menu_col4 = st.columns(4)
+with menu_col1:
+    if st.button(
+        "Compose",
+        use_container_width=True,
+        key="hero_menu_compose",
+        type="primary" if st.session_state.active_menu == "compose" else "secondary",
+    ):
+        st.session_state.active_menu = "compose"
+        st.session_state.quick_action = "generate"
+        st.toast("Compose mode ready")
+with menu_col2:
+    if st.button(
+        "Analyze",
+        use_container_width=True,
+        key="hero_menu_analyze",
+        type="primary" if st.session_state.active_menu == "analyze" else "secondary",
+    ):
+        st.session_state.active_menu = "analyze"
+        st.session_state.quick_action = "judge"
+        st.toast("Analyze tools ready")
+with menu_col3:
+    if st.button(
+        "Generate",
+        use_container_width=True,
+        key="hero_menu_generate",
+        type="primary" if st.session_state.active_menu == "generate" else "secondary",
+    ):
+        st.session_state.active_menu = "generate"
+        st.session_state.quick_action = "generate"
+        st.toast("Generation flow selected")
+with menu_col4:
+    if st.button(
+        "Export",
+        use_container_width=True,
+        key="hero_menu_export",
+        type="primary" if st.session_state.active_menu == "export" else "secondary",
+    ):
+        st.session_state.active_menu = "export"
+        st.session_state.quick_action = "export"
+        st.toast("Jumping to export flow")
+
 st.markdown("<div class='quickbar'>", unsafe_allow_html=True)
 qa1, qa2, qa3, qa4 = st.columns(4)
 with qa1:
     if st.button("🚀 Generate", use_container_width=True, key="quick_generate"):
+        st.session_state.active_menu = "generate"
         st.session_state.quick_action = "generate"
 with qa2:
     if st.button("📊 Judge", use_container_width=True, key="quick_judge"):
+        st.session_state.active_menu = "analyze"
         st.session_state.quick_action = "judge"
 with qa3:
     if st.button("💾 Save", use_container_width=True, key="quick_save"):
+        st.session_state.active_menu = "compose"
         st.session_state.quick_action = "save"
 with qa4:
     if st.button("⬇️ Export TXT", use_container_width=True, key="quick_export"):
+        st.session_state.active_menu = "export"
         st.session_state.quick_action = "export"
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1598,9 +1778,9 @@ if "ស្វ័យប្រវត្តិ" in mode:
             "api_model_custom": st.session_state.api_model_custom,
             "cost_safe_mode": st.session_state.cost_safe_mode,
             "cost_safe_cap": int(st.session_state.cost_safe_cap),
-            "suno_base_url": st.session_state.get("suno_base_url", ""),
-            "suno_create_path": st.session_state.get("suno_create_path", "/api/v1/generate/replace-section"),
-            "suno_status_path": st.session_state.get("suno_status_path", "/api/generate/{id}"),
+            "suno_base_url": st.session_state.get("suno_base_url", "https://api.sunoapi.org"),
+            "suno_create_path": st.session_state.get("suno_create_path", "/api/v1/generate"),
+            "suno_status_path": st.session_state.get("suno_status_path", "/api/v1/generate/record-info?taskId={id}"),
             "suno_model": st.session_state.get("suno_model", "chirp-v3-5"),
             "suno_make_instrumental": bool(st.session_state.get("suno_make_instrumental", False)),
         }
@@ -2050,6 +2230,21 @@ with tab3:
         except Exception as pdf_exc:
             st.button("⬇️ PDF", use_container_width=True, disabled=True)
             st.caption(f"PDF export unavailable right now: {str(pdf_exc)[:120]}")
+            if HAS_DOCX:
+                fallback_docx = make_docx_bytes(
+                    "SEVENZ Lyrics Export",
+                    st.session_state.notepad_content,
+                    provider,
+                    model_name,
+                )
+                st.download_button(
+                    "⬇️ DOCX (Fallback)",
+                    data=fallback_docx,
+                    file_name="sevenz_lyrics_fallback.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                    key="docx_fallback_btn",
+                )
 
     with col_docx:
         if HAS_DOCX:
@@ -2316,3 +2511,6 @@ with tab4:
         with st.expander("Suno Raw Response", expanded=False):
             st.code(st.session_state.suno_last_raw)
     st.markdown("</div>", unsafe_allow_html=True)
+
+app_version = os.getenv("APP_VERSION", "local-dev")
+st.caption(f"SEVENZ Studio | version: {app_version} | updated: {datetime.datetime.now().strftime('%Y-%m-%d')}")
