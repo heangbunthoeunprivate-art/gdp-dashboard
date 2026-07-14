@@ -779,41 +779,41 @@ def call_ai(
                     token_budgets.append(boosted_budget)
 
                 for current_max_tokens in token_budgets:
-                for delay in retry_delays:
-                    if delay > 0:
-                        time.sleep(delay)
-                    try:
-                        response_json = gemini_generate_content_rest(
-                            api_key=api_key,
-                            model=chosen_model,
-                            system_prompt=system_prompt,
-                            user_prompt=user_prompt,
-                            temperature=temperature,
-                            max_tokens=current_max_tokens,
-                        )
-                        text, parse_note = gemini_extract_text(response_json)
-                        response = response_json
-                        if not text.strip():
-                            if "MAX_TOKENS" in (parse_note or "") and current_max_tokens < boosted_budget:
-                                # Retry same model once with a larger output budget.
-                                continue
-                            details = parse_note or json.dumps(response_json, ensure_ascii=False)[:800]
-                            return False, f"Gemini returned no text ({details})."
-                        if track_usage:
-                            update_daily_usage(system_prompt + "\n" + user_prompt, text, response)
-                        if chosen_model != model:
-                            return True, f"⚠️ Model '{model}' unavailable, switched to '{chosen_model}'.\n\n{text}"
-                        return True, text
-                    except Exception as exc:
-                        err_text = str(exc)
-                        last_error = err_text
-                        if "404" in err_text and "no longer available" in err_text.lower():
+                    for delay in retry_delays:
+                        if delay > 0:
+                            time.sleep(delay)
+                        try:
+                            response_json = gemini_generate_content_rest(
+                                api_key=api_key,
+                                model=chosen_model,
+                                system_prompt=system_prompt,
+                                user_prompt=user_prompt,
+                                temperature=temperature,
+                                max_tokens=current_max_tokens,
+                            )
+                            text, parse_note = gemini_extract_text(response_json)
+                            response = response_json
+                            if not text.strip():
+                                if "MAX_TOKENS" in (parse_note or "") and current_max_tokens < boosted_budget:
+                                    # Retry same model once with a larger output budget.
+                                    continue
+                                details = parse_note or json.dumps(response_json, ensure_ascii=False)[:800]
+                                return False, f"Gemini returned no text ({details})."
+                            if track_usage:
+                                update_daily_usage(system_prompt + "\n" + user_prompt, text, response)
+                            if chosen_model != model:
+                                return True, f"⚠️ Model '{model}' unavailable, switched to '{chosen_model}'.\n\n{text}"
+                            return True, text
+                        except Exception as exc:
+                            err_text = str(exc)
+                            last_error = err_text
+                            if "404" in err_text and "no longer available" in err_text.lower():
+                                break
+                            if is_quota_error(err_text):
+                                if delay != retry_delays[-1]:
+                                    continue
+                                return False, format_provider_error(err_text, provider, chosen_model)
                             break
-                        if is_quota_error(err_text):
-                            if delay != retry_delays[-1]:
-                                continue
-                            return False, format_provider_error(err_text, provider, chosen_model)
-                        break
             return False, format_provider_error(last_error, provider, model)
         else:
             client = OpenAI(api_key=api_key)
