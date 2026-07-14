@@ -615,35 +615,90 @@ def format_provider_error(err_text, provider, model):
 
 
 def gemini_generate_content_rest(api_key, model, system_prompt, user_prompt, temperature, max_tokens):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-    headers = {
-        "Content-Type": "application/json; charset=utf-8",
-    }
-    params = {"key": api_key}
-    payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [{"text": user_prompt}],
-            }
-        ],
-        "systemInstruction": {
-            "parts": [{"text": system_prompt}],
-        },
-        "generationConfig": {
-            "temperature": temperature,
-            "maxOutputTokens": max_tokens,
-        },
-    }
-    response = requests.post(url, headers=headers, params=params, json=payload, timeout=90)
-    if response.status_code >= 400:
+    api_versions = ["v1beta", "v1"]
+    last_error = None
+
+    for api_version in api_versions:
+        url = f"https://generativelanguage.googleapis.com/{api_version}/models/{model}:generateContent"
+        headers = {
+            "Content-Type": "application/json; charset=utf-8",
+        }
+        params = {"key": api_key}
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": user_prompt}],
+                }
+            ],
+            "systemInstruction": {
+                "parts": [{"text": system_prompt}],
+            },
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": max_tokens,
+            },
+        }
+        response = requests.post(url, headers=headers, params=params, json=payload, timeout=90)
+        if response.status_code >= 400:
+            try:
+                error_json = response.json()
+                error_message = error_json.get("error", {}).get("message", response.text)
+            except Exception:
+                error_message = response.text
+            last_error = RuntimeError(f"HTTP {response.status_code}: {error_message}")
+            if response.status_code == 404:
+                continue
+            raise last_error
+        return response.json()
+
+    if last_error:
+        raise last_error
+    raise RuntimeError("Gemini request failed without a response.")
+
+
+def gemini_list_models_rest(api_key):
+    for api_version in ["v1beta", "v1"]:
+        url = f"https://generativelanguage.googleapis.com/{api_version}/models"
+        response = requests.get(url, params={"key": api_key}, timeout=30)
+        if response.status_code >= 400:
+            continue
         try:
-            error_json = response.json()
-            error_message = error_json.get("error", {}).get("message", response.text)
+            data = response.json()
+            models = data.get("models", []) if isinstance(data, dict) else []
+            model_names = []
+            for item in models:
+                if isinstance(item, dict):
+                    name = item.get("name", "")
+                    if name.startswith("models/"):
+                        name = name.split("models/", 1)[1]
+                    if name:
+                        model_names.append(name)
+            return model_names
         except Exception:
-            error_message = response.text
-        raise RuntimeError(f"HTTP {response.status_code}: {error_message}")
-    return response.json()
+            return []
+    return []
+
+
+def gemini_candidate_models(api_key, requested_model):
+    requested = (requested_model or "").strip()
+    discovered = gemini_list_models_rest(api_key)
+
+    preferred = []
+    if requested:
+        preferred.append(requested)
+
+    flash_models = [m for m in discovered if "flash" in m.lower()]
+    pro_models = [m for m in discovered if "pro" in m.lower()]
+
+    for item in flash_models + pro_models + GEMINI_FALLBACK_MODELS:
+        if item and item not in preferred:
+            preferred.append(item)
+
+    if not preferred:
+        preferred = ["gemini-2.5-flash", "gemini-2.5-pro-latest"]
+
+    return preferred
 
 
 # -------------------- AI Helpers --------------------
@@ -672,7 +727,7 @@ def call_ai(
             )
 
         if provider == "Gemini":
-            candidate_models = [model] + [m for m in GEMINI_FALLBACK_MODELS if m != model]
+            candidate_models = gemini_candidate_models(api_key, model)
             last_error = ""
 
             for chosen_model in candidate_models:
