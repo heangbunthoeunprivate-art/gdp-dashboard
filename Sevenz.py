@@ -225,10 +225,10 @@ MODEL_OPTIONS = {
         "o3",
         "o1",
     ],
-    "Gemini": ["gemini-2.5-pro", "gemini-2.5-pro-latest"],
+    "Gemini": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-pro-latest"],
 }
 
-GEMINI_FALLBACK_MODELS = ["gemini-2.5-pro", "gemini-2.5-pro-latest"]
+GEMINI_FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-pro-latest"]
 SETTINGS_PATH = Path(__file__).with_name(".sevenz_settings.json")
 ENV_PATH = Path(__file__).with_name(".env")
 ENV_KEY_CANDIDATES = {
@@ -1523,7 +1523,7 @@ if "selected_lang" not in st.session_state:
 if "api_provider" not in st.session_state:
     st.session_state.api_provider = "Gemini"
 if "api_model_choice" not in st.session_state:
-    st.session_state.api_model_choice = "gemini-2.5-pro"
+    st.session_state.api_model_choice = "gemini-2.5-flash"
 if "api_model_custom" not in st.session_state:
     st.session_state.api_model_custom = ""
 if "api_test_message" not in st.session_state:
@@ -1734,7 +1734,7 @@ with tool_a:
         save_local_settings(
             {
                 "api_provider": st.session_state.get("api_provider", "Gemini"),
-                "api_model_choice": st.session_state.get("api_model_choice", "gemini-2.5-pro"),
+                "api_model_choice": st.session_state.get("api_model_choice", "gemini-2.5-flash"),
                 "api_model_custom": st.session_state.get("api_model_custom", ""),
                 "cost_safe_mode": bool(st.session_state.get("cost_safe_mode", False)),
                 "cost_safe_cap": int(st.session_state.get("cost_safe_cap", 500)),
@@ -1751,7 +1751,7 @@ with tool_a:
 
 settings_snapshot = {
     "api_provider": st.session_state.get("api_provider", "Gemini"),
-    "api_model_choice": st.session_state.get("api_model_choice", "gemini-2.5-pro"),
+    "api_model_choice": st.session_state.get("api_model_choice", "gemini-2.5-flash"),
     "api_model_custom": st.session_state.get("api_model_custom", ""),
     "cost_safe_mode": bool(st.session_state.get("cost_safe_mode", False)),
     "cost_safe_cap": int(st.session_state.get("cost_safe_cap", 500)),
