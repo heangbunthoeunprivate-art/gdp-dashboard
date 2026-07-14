@@ -36,6 +36,7 @@ except ImportError:
 
 GEMINI_MODEL_CACHE = {}
 GEMINI_MODEL_CACHE_TTL_SEC = 900
+GEMINI_CONTINUE_ROUNDS = 4
 
 
 STRUCTURES = {
@@ -869,7 +870,7 @@ def call_ai(
                             if "MAX_TOKENS" in (parse_note or ""):
                                 assembled_parts = [text.strip()]
                                 continuation_source = text
-                                for _ in range(2):
+                                for _ in range(GEMINI_CONTINUE_ROUNDS):
                                     (cont_text, cont_note), cont_response_json = continue_gemini_output(
                                         chosen_model,
                                         user_prompt,
