@@ -12,16 +12,6 @@ from gtts import gTTS
 from openai import OpenAI
 
 try:
-    from google import genai
-    from google.genai import types as google_types
-
-    HAS_GOOGLE_GENAI = True
-except ImportError:
-    genai = None
-    google_types = None
-    HAS_GOOGLE_GENAI = False
-
-try:
     import requests
 
     HAS_REQUESTS = True
@@ -521,6 +511,8 @@ def estimate_tokens(text):
 def update_daily_usage(prompt_text, output_text, response):
     ensure_daily_usage_state()
     usage = getattr(response, "usage", None) or getattr(response, "usage_metadata", None)
+    if usage is None and isinstance(response, dict):
+        usage = response.get("usageMetadata") or response.get("usage_metadata")
 
     def first_attr(obj, names):
         if not obj:
@@ -529,6 +521,8 @@ def update_daily_usage(prompt_text, output_text, response):
             value = getattr(obj, name, None)
             if value is not None:
                 return value
+            if isinstance(obj, dict) and name in obj and obj.get(name) is not None:
+                return obj.get(name)
         return None
 
     prompt_tokens = first_attr(usage, ["prompt_tokens", "prompt_token_count", "input_tokens", "input_token_count"])
@@ -612,6 +606,38 @@ def format_provider_error(err_text, provider, model):
     return f"{provider} error: {err_text}"
 
 
+def gemini_generate_content_rest(api_key, model, system_prompt, user_prompt, temperature, max_tokens):
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    headers = {
+        "Content-Type": "application/json; charset=utf-8",
+    }
+    params = {"key": api_key}
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": user_prompt}],
+            }
+        ],
+        "systemInstruction": {
+            "parts": [{"text": system_prompt}],
+        },
+        "generationConfig": {
+            "temperature": temperature,
+            "maxOutputTokens": max_tokens,
+        },
+    }
+    response = requests.post(url, headers=headers, params=params, json=payload, timeout=90)
+    if response.status_code >= 400:
+        try:
+            error_json = response.json()
+            error_message = error_json.get("error", {}).get("message", response.text)
+        except Exception:
+            error_message = response.text
+        raise RuntimeError(f"HTTP {response.status_code}: {error_message}")
+    return response.json()
+
+
 # -------------------- AI Helpers --------------------
 def call_ai(
     api_key,
@@ -638,13 +664,6 @@ def call_ai(
             )
 
         if provider == "Gemini":
-            if not HAS_GOOGLE_GENAI:
-                return False, "Gemini SDK is not installed. Please install google-genai.", {}
-
-            client = genai.Client(
-                api_key=api_key,
-                http_options=google_types.HttpOptions(api_version="v1"),
-            )
             candidate_models = [model] + [m for m in GEMINI_FALLBACK_MODELS if m != model]
             last_error = ""
 
@@ -653,16 +672,18 @@ def call_ai(
                     if delay > 0:
                         time.sleep(delay)
                     try:
-                        response = client.models.generate_content(
+                        response_json = gemini_generate_content_rest(
+                            api_key=api_key,
                             model=chosen_model,
-                            contents=user_prompt,
-                            config=google_types.GenerateContentConfig(
-                                system_instruction=system_prompt,
-                                temperature=temperature,
-                                max_output_tokens=max_tokens,
-                            ),
+                            system_prompt=system_prompt,
+                            user_prompt=user_prompt,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
                         )
-                        text = getattr(response, "text", "") or ""
+                        candidates = response_json.get("candidates", [])
+                        parts = (((candidates[0] if candidates else {}).get("content", {}) or {}).get("parts", []))
+                        text = "".join((part.get("text", "") for part in parts if isinstance(part, dict)))
+                        response = response_json
                         if not text.strip():
                             return False, "Error: Empty response from AI model."
                         if track_usage:
