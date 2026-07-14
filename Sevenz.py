@@ -711,25 +711,35 @@ def gemini_extract_text(response_json):
 
     candidates = response_json.get("candidates") or []
     if candidates:
-        candidate = candidates[0] if isinstance(candidates[0], dict) else {}
-        content = candidate.get("content") or {}
-        parts = content.get("parts") or []
-        parts_text = []
-        for part in parts:
-            if isinstance(part, dict):
-                if isinstance(part.get("text"), str) and part.get("text").strip():
-                    parts_text.append(part.get("text").strip())
-                elif isinstance(part.get("inline_data"), dict):
-                    parts_text.append("[inline_data]")
-                elif isinstance(part.get("functionCall"), dict):
-                    parts_text.append("[functionCall]")
-        text = "\n".join(parts_text).strip()
-        if text:
-            return text, ""
+        finish_reasons = []
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            content = candidate.get("content") or {}
+            parts = content.get("parts") or []
+            parts_text = []
+            for part in parts:
+                if isinstance(part, dict):
+                    if isinstance(part.get("text"), str) and part.get("text").strip():
+                        parts_text.append(part.get("text").strip())
+                    elif isinstance(part.get("inline_data"), dict):
+                        parts_text.append("[inline_data]")
+                    elif isinstance(part.get("functionCall"), dict):
+                        parts_text.append("[functionCall]")
+            text = "\n".join(parts_text).strip()
+            if text:
+                return text, ""
 
-        finish_reason = candidate.get("finishReason") or candidate.get("finish_reason") or ""
-        if finish_reason:
-            return "", f"finishReason={finish_reason}"
+            finish_reason = candidate.get("finishReason") or candidate.get("finish_reason") or ""
+            if finish_reason:
+                finish_reasons.append(str(finish_reason))
+
+        if finish_reasons:
+            unique_reasons = []
+            for reason in finish_reasons:
+                if reason not in unique_reasons:
+                    unique_reasons.append(reason)
+            return "", f"finishReason={','.join(unique_reasons)}"
 
     prompt_feedback = response_json.get("promptFeedback") or response_json.get("prompt_feedback") or {}
     if isinstance(prompt_feedback, dict):
@@ -794,6 +804,11 @@ def call_ai(
                             text, parse_note = gemini_extract_text(response_json)
                             response = response_json
                             if not text.strip():
+                                if "finishReason=STOP" in (parse_note or ""):
+                                    # Some Gemini responses return STOP with empty first candidate.
+                                    # Retry delays/model fallbacks before surfacing an error.
+                                    if delay != retry_delays[-1]:
+                                        continue
                                 if "MAX_TOKENS" in (parse_note or "") and current_max_tokens < boosted_budget:
                                     # Retry same model once with a larger output budget.
                                     continue
