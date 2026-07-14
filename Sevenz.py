@@ -2195,7 +2195,7 @@ with tab1:
     )
 
     if st.session_state.compare_enabled:
-        st.session_state.compare_judge_profile = st.selectbox(
+        st.selectbox(
             "⚖️ AI Judge Style",
             list(JUDGE_PROFILES.keys()),
             index=list(JUDGE_PROFILES.keys()).index(st.session_state.compare_judge_profile)
