@@ -701,6 +701,48 @@ def gemini_candidate_models(api_key, requested_model):
     return preferred
 
 
+def gemini_extract_text(response_json):
+    if not isinstance(response_json, dict):
+        return "", "Gemini response was not JSON"
+
+    direct_text = response_json.get("text")
+    if isinstance(direct_text, str) and direct_text.strip():
+        return direct_text.strip(), ""
+
+    candidates = response_json.get("candidates") or []
+    if candidates:
+        candidate = candidates[0] if isinstance(candidates[0], dict) else {}
+        content = candidate.get("content") or {}
+        parts = content.get("parts") or []
+        parts_text = []
+        for part in parts:
+            if isinstance(part, dict):
+                if isinstance(part.get("text"), str) and part.get("text").strip():
+                    parts_text.append(part.get("text").strip())
+                elif isinstance(part.get("inline_data"), dict):
+                    parts_text.append("[inline_data]")
+                elif isinstance(part.get("functionCall"), dict):
+                    parts_text.append("[functionCall]")
+        text = "\n".join(parts_text).strip()
+        if text:
+            return text, ""
+
+        finish_reason = candidate.get("finishReason") or candidate.get("finish_reason") or ""
+        if finish_reason:
+            return "", f"finishReason={finish_reason}"
+
+    prompt_feedback = response_json.get("promptFeedback") or response_json.get("prompt_feedback") or {}
+    if isinstance(prompt_feedback, dict):
+        block_reason = prompt_feedback.get("blockReason") or prompt_feedback.get("block_reason") or ""
+        safety_ratings = prompt_feedback.get("safetyRatings") or prompt_feedback.get("safety_ratings") or []
+        if block_reason:
+            return "", f"prompt blocked: {block_reason}"
+        if safety_ratings:
+            return "", "prompt blocked by safety settings"
+
+    return "", "no text returned"
+
+
 # -------------------- AI Helpers --------------------
 def call_ai(
     api_key,
@@ -743,12 +785,11 @@ def call_ai(
                             temperature=temperature,
                             max_tokens=max_tokens,
                         )
-                        candidates = response_json.get("candidates", [])
-                        parts = (((candidates[0] if candidates else {}).get("content", {}) or {}).get("parts", []))
-                        text = "".join((part.get("text", "") for part in parts if isinstance(part, dict)))
+                        text, parse_note = gemini_extract_text(response_json)
                         response = response_json
                         if not text.strip():
-                            return False, "Error: Empty response from AI model."
+                            details = parse_note or json.dumps(response_json, ensure_ascii=False)[:800]
+                            return False, f"Gemini returned no text ({details})."
                         if track_usage:
                             update_daily_usage(system_prompt + "\n" + user_prompt, text, response)
                         if chosen_model != model:
