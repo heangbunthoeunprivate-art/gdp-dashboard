@@ -2038,14 +2038,18 @@ with tab3:
         )
 
     with col_pdf:
-        pdf_data = make_pdf_bytes("SEVENZ Lyrics Export", st.session_state.notepad_content, provider, model_name)
-        st.download_button(
-            "⬇️ PDF",
-            data=pdf_data,
-            file_name="sevenz_lyrics.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-        )
+        try:
+            pdf_data = make_pdf_bytes("SEVENZ Lyrics Export", st.session_state.notepad_content, provider, model_name)
+            st.download_button(
+                "⬇️ PDF",
+                data=pdf_data,
+                file_name="sevenz_lyrics.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
+        except Exception as pdf_exc:
+            st.button("⬇️ PDF", use_container_width=True, disabled=True)
+            st.caption(f"PDF export unavailable right now: {str(pdf_exc)[:120]}")
 
     with col_docx:
         if HAS_DOCX:
